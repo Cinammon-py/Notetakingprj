@@ -1,0 +1,118 @@
+<!-- login.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f8f8;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      h1 {
+        font-family: Courier, monospace;
+        text-align: center;
+        color: #020303;
+      }
+      h2 {
+        font-family: 'Courier New', monospace;
+        text-align: center;
+        color: GRAY;
+      }
+      h3 {
+        text-align: center;
+        font-family: 'Courier', monospace;
+        color: GRAY;
+      }
+
+      form {
+        font-family: Verdana, sans-serif;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 13px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border: none;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 30px;
+        box-sizing: border-box;
+      }
+
+      button {
+        margin-top: 2%;
+        margin-left: 40%;
+        background-color: #020303;
+        color: #fff;
+        padding-top: 5px;
+        padding: 13px;
+        border: none;
+        border-radius: 13px;
+        cursor: pointer;
+      }
+      button:hover {
+        transform: scale(1.05);
+        background-color: grey;
+      }
+      .register-link {
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      .register-link a {
+        color: gray;
+        text-decoration: none;
+        font-weight: bold;
+      }
+
+      .register-link a:hover {
+        transform: scale(1.05);
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>LOGIN TO START</h1>
+    <h2>< NOTE /></h2>
+    <form action="/login" method="post">
+      <!-- Added action and method attributes -->
+      <h3>LOGIN</h3>
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required />
+
+      <button type="submit">Login</button>
+      <div id="error-message"></div>
+      <div class="register-link">Don't have an account? <a href="/register.html">Sign Up</a>.</div>
+    </form>
+    <script src="script.js"></script>
+    <script>
+      // Check for an error parameter in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+
+      // Display the error message in a popup
+      if (error) {
+        const errorMessageContainer = document.getElementById('error-message');
+        errorMessageContainer.innerHTML = `<p>${error}</p>`;
+      }
+    </script>
+  </body>
+</html>

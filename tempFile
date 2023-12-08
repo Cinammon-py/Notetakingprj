@@ -1,0 +1,169 @@
+/*
+document.addEventListener('DOMContentLoaded', function () {
+  var app = document.getElementById('app');
+  var noteInput = document.querySelector('.note-input');
+  var pinIcon = document.querySelector('.pin-icon');
+  var noteContainer = document.querySelector('.note-container');
+
+  pinIcon.addEventListener('click', function () {
+    var noteContent = noteInput.value.trim();
+
+    if (noteContent !== '') {
+      var noteCard = document.createElement('div');
+      noteCard.className = 'note-card';
+
+      // Calculate content length to determine dynamic width
+      var contentLength = noteContent.length;
+
+      // Adjust min-width and max-width based on content length
+      var minWidth = Math.min(150 + contentLength * 5, 100); // Adjust these values accordingly
+      var maxWidth = Math.min(200 + contentLength * 5, 450); // Adjust these values accordingly
+
+      noteCard.style.minWidth = minWidth + 'px';
+      noteCard.style.maxWidth = maxWidth + 'px';
+
+      var noteCardContent = document.createElement('div');
+      noteCardContent.className = 'note-content';
+
+      // Set a maximum length before enabling the scrollbar
+      var maxLength = 100; // Adjust this value accordingly
+      if (contentLength > maxLength) {
+        noteCardContent.style.overflowY = 'auto';
+        noteCardContent.style.maxHeight = '300px'; // Adjust this value accordingly
+        noteCard.style.height = 'auto'; // Set height to auto for scrollable content
+      } else {
+        noteCard.style.height = '80px'; // Set fixed height for non-scrollable content
+      }
+
+      noteCardContent.innerText = noteContent;
+      noteCardContent.style.boxSizing = 'border-box';
+
+      var noteActions = document.createElement('div');
+      noteActions.className = 'note-actions';
+
+      var trashIcon = document.createElement('img');
+      trashIcon.className = 'icon trash-icon';
+      trashIcon.src = 'https://img.icons8.com/ios/452/trash.png';
+      trashIcon.alt = 'Trash icon';
+
+      noteActions.appendChild(trashIcon);
+
+      noteCard.appendChild(noteCardContent);
+      noteCard.appendChild(noteActions);
+
+      noteContainer.appendChild(noteCard);
+      noteInput.value = ''; // Clear the input after creating the note card
+
+      // Check if the note-container has a vertical scrollbar
+      function hasVerticalScrollbar() {
+        return noteContainer.scrollHeight > noteContainer.clientHeight;
+      }
+
+      // Toggle the shadow based on the presence of the scrollbar
+      function toggleShadow() {
+        noteContainer.style.boxShadow = hasVerticalScrollbar() ? 'inset 0px -5px 5px -5px rgba(0, 0, 0, 0.5)' : 'none';
+      }
+
+      // Add an event listener for scroll events
+      noteContainer.addEventListener('scroll', toggleShadow);
+
+      // Initial check on page load
+      toggleShadow();
+
+      //   // Reset note card height to auto
+      //   noteCard.style.height = 'auto';
+      //   // Set note card height based on content
+      //   noteCard.style.height = noteCardContent.scrollHeight + 'px';
+      // Set note card height based on content
+    }
+  });
+});
+*/
+
+document.addEventListener('DOMContentLoaded', async function () {
+  var app = document.getElementById('app');
+  var noteInput = document.querySelector('.note-input');
+  var pinIcon = document.querySelector('.pin-icon');
+  var noteContainer = document.querySelector('.note-container');
+
+  // Function to create a note card
+  function createNoteCard(content) {
+    var noteCard = document.createElement('div');
+    noteCard.className = 'note-card';
+
+    // Calculate content length to determine dynamic width
+    var contentLength = content.length;
+
+    // Adjust min-width and max-width based on content length
+    var minWidth = Math.min(150 + contentLength * 5, 100); // Adjust these values accordingly
+    var maxWidth = Math.min(200 + contentLength * 5, 450); // Adjust these values accordingly
+
+    noteCard.style.minWidth = minWidth + 'px';
+    noteCard.style.maxWidth = maxWidth + 'px';
+
+    var noteCardContent = document.createElement('div');
+    noteCardContent.className = 'note-content';
+
+    // Set a maximum length before enabling the scrollbar
+    var maxLength = 100; // Adjust this value accordingly
+    if (contentLength > maxLength) {
+      noteCardContent.style.overflowY = 'auto';
+      noteCardContent.style.maxHeight = '300px'; // Adjust this value accordingly
+      noteCard.style.height = 'auto'; // Set height to auto for scrollable content
+    } else {
+      noteCard.style.height = '80px'; // Set fixed height for non-scrollable content
+    }
+
+    noteCardContent.innerText = content;
+    noteCardContent.style.boxSizing = 'border-box';
+
+    var noteActions = document.createElement('div');
+    noteActions.className = 'note-actions';
+
+    var trashIcon = document.createElement('img');
+    trashIcon.className = 'icon trash-icon';
+    trashIcon.src = 'https://img.icons8.com/ios/452/trash.png';
+    trashIcon.alt = 'Trash icon';
+
+    noteActions.appendChild(trashIcon);
+
+    noteCard.appendChild(noteCardContent);
+    noteCard.appendChild(noteActions);
+
+    noteContainer.appendChild(noteCard);
+  }
+
+  // Function to fetch and display existing notes
+  async function displayExistingNotes() {
+    try {
+      // Fetch notes data from the server
+      const response = await fetch('/getNotes');
+      const { notes } = await response.json();
+
+      // Display each note
+      notes.forEach((note) => createNoteCard(note.content));
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+  }
+
+  // Display existing notes on page load
+  await displayExistingNotes();
+
+  // Event listener for creating new notes
+  pinIcon.addEventListener('click', async function () {
+    var noteContent = noteInput.value.trim();
+
+    if (noteContent !== '') {
+      // Create a new note card for the new note
+      createNoteCard(noteContent);
+
+      // Clear the input after creating the note card
+      noteInput.value = '';
+
+      // TODO: Add logic to send the new note to the server and save it in the database
+      // You can use the fetch API to send a POST request to your server endpoint for creating notes
+      // Example: fetch('/createNote', { method: 'POST', body: JSON.stringify({ content: noteContent }), headers: { 'Content-Type': 'application/json' } });
+    }
+  });
+});
