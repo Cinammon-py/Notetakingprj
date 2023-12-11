@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   var noteInput = document.querySelector('.note-input');
   var trashIcon = document.getElementsByClassName('trash-icon');
   var pinIcon = document.querySelector('.pin-icon');
-  var noteContainer = document.getElementsByClassName('note-container')[0];
+  var noteContainer = document.querySelector('.note-container');
 
   // Check if the page was redirected due to forced login
   const forcedLogin = window.location.search.includes('forcedLogin=true');

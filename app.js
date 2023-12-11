@@ -18,9 +18,11 @@ const corsOptions = {
   credentials: true,
 };
 
+app.use(express.json());
 app.use(cors(corsOptions));
 app.set('views', path.join(__dirname, '/'));
 app.use(express.static(path.join(__dirname, '/')));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Connect to MongoDB
 mongoose.connect('mongodb+srv://bloguser:bloguser@cluster0.0ioti5t.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
@@ -50,8 +52,6 @@ app.use(
     saveUninitialized: true,
   })
 );
-
-app.use(bodyParser.urlencoded({ extended: true }));
 
 const authenticateUser = async (req, res, next) => {
   if (req.session && req.session.user) {
