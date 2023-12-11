@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: 'http://localhost:3000/',
+  origin: 'http://localhost:3000',
   credentials: true,
 };
 
@@ -128,7 +128,7 @@ app.post('/login', async (req, res) => {
       // Store user information in session storage
       req.session.user = { _id: user._id, username: user.username, role: user.role, active: user.active, notes: userNotes };
       // Send response to the client
-      res.sendFile(path.join(__dirname, 'Home.html'));
+      res.redirect('/Home.html');
     } else {
       // Redirect to login.html with an error parameter
       console.log('Authentication failed. Redirecting to login.html');
@@ -185,13 +185,24 @@ app.post('/register', async (req, res) => {
 app.post('/createNote', authenticateUser, async (req, res) => {
   const { content } = req.body;
   const userId = req.currentUser._id;
-  console.log('Request body:', req.body);
+
+  console.log('Received request to create note. Content:', content);
+
   try {
+    if (!content) {
+      return res.status(400).json({ error: 'Note content is required.' });
+    }
+
     const newNote = new Note({ content, user: userId });
     const savedNote = await newNote.save();
+    const note = await Note.findById(savedNote._id);
+
+    if (!note) {
+      return res.status(500).json({ error: 'Error retrieving the created note.' });
+    }
 
     // Respond with success or redirect as needed
-    res.status(200).json(savedNote);
+    res.status(200).json(note);
     console.log('Note created successfully');
   } catch (error) {
     console.log('Error creating note!', error);

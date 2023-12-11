@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async function () {
           // Clear user information from sessionStorage
           sessionStorage.removeItem('user');
           // Redirect to the login page
-          window.location.href = '/login.html';
+          window.location.replace('/login.html');
           console.log('session cleared');
         } else {
           console.error('Failed to log out. Server returned:', response.status);
@@ -47,50 +47,55 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   // Function to create a note card
-  function createNoteCard(content) {
+  function createNoteCard(note) {
     var noteCard = document.createElement('div');
     noteCard.className = 'note-card';
 
-    // Calculate content length to determine dynamic width
-    var contentLength = content.length;
+    if (note && note.content !== undefined) {
+      var content = note.content || '';
+      // Calculate content length to determine dynamic width
+      var contentLength = content.length;
 
-    // Adjust min-width and max-width based on content length
-    var minWidth = Math.min(150 + contentLength * 5, 100); // Adjust these values accordingly
-    var maxWidth = Math.min(200 + contentLength * 5, 450); // Adjust these values accordingly
+      // Adjust min-width and max-width based on content length
+      var minWidth = Math.min(150 + contentLength * 5, 100); // Adjust these values accordingly
+      var maxWidth = Math.min(200 + contentLength * 5, 450); // Adjust these values accordingly
 
-    noteCard.style.minWidth = minWidth + 'px';
-    noteCard.style.maxWidth = maxWidth + 'px';
+      noteCard.style.minWidth = minWidth + 'px';
+      noteCard.style.maxWidth = maxWidth + 'px';
 
-    var noteCardContent = document.createElement('div');
-    noteCardContent.className = 'note-content';
+      var noteCardContent = document.createElement('div');
+      noteCardContent.className = 'note-content';
 
-    // Set a maximum length before enabling the scrollbar
-    var maxLength = 100; // Adjust this value accordingly
-    if (contentLength > maxLength) {
-      noteCardContent.style.overflowY = 'auto';
-      noteCardContent.style.maxHeight = '300px'; // Adjust this value accordingly
-      noteCard.style.height = 'auto'; // Set height to auto for scrollable content
+      // Set a maximum length before enabling scrollbar
+      var maxLength = 100;
+      if (contentLength > maxLength) {
+        noteCardContent.style.overflowY = 'auto';
+        noteCardContent.style.maxHeight = '300px'; // Adjust this value accordingly
+        noteCard.style.height = 'auto'; // Set height to auto for scrollable content
+      } else {
+        noteCard.style.height = '80px'; // Set fixed height for non-scrollable content
+      }
+
+      noteCardContent.innerText = note.content;
+      noteCardContent.style.boxSizing = 'border-box';
+
+      var noteActions = document.createElement('div');
+      noteActions.className = 'note-actions';
+
+      var trashIcon = document.createElement('img');
+      trashIcon.className = 'icon trash-icon';
+      trashIcon.src = 'https://img.icons8.com/ios/452/trash.png';
+      trashIcon.alt = 'Trash icon';
+
+      noteActions.appendChild(trashIcon);
+
+      noteCard.appendChild(noteCardContent);
+      noteCard.appendChild(noteActions);
+
+      noteContainer.appendChild(noteCard);
     } else {
-      noteCard.style.height = '80px'; // Set fixed height for non-scrollable content
+      console.error('Note content is undefined:', note);
     }
-
-    noteCardContent.innerText = content;
-    noteCardContent.style.boxSizing = 'border-box';
-
-    var noteActions = document.createElement('div');
-    noteActions.className = 'note-actions';
-
-    var trashIcon = document.createElement('img');
-    trashIcon.className = 'icon trash-icon';
-    trashIcon.src = 'https://img.icons8.com/ios/452/trash.png';
-    trashIcon.alt = 'Trash icon';
-
-    noteActions.appendChild(trashIcon);
-
-    noteCard.appendChild(noteCardContent);
-    noteCard.appendChild(noteActions);
-
-    noteContainer.appendChild(noteCard);
   }
   async function getUserIdFromSession() {
     return new Promise((resolve) => {
@@ -99,16 +104,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
   }
 
-  // Function to fetch and display existing notes
   async function displayExistingNotes() {
     try {
       const response = await fetch('/getNotes');
-      const rawData = response.json(); // Get the raw response as text
-
-      // Log the raw response from the server
+      const rawData = await response.json();
       console.log('Raw response from server:', rawData);
 
-      // Try parsing the response as JSON
+      // parsing  response as JSON
       let data;
       try {
         data = rawData;
@@ -117,11 +119,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
       }
 
-      // Log the parsed data
-      console.log('Parsed data:', data);
-
       if (data && data.notes) {
-        data.notes.forEach((note) => createNoteCard(note.content));
+        data.notes.forEach((note) => createNoteCard(note));
       } else {
         console.error('Unexpected response format:', data);
       }
@@ -136,29 +135,35 @@ document.addEventListener('DOMContentLoaded', async function () {
   const userId = getUserIdFromSession();
   if (!userId) {
     console.error('User not logged in. Unable to create note.');
-    // Optionally, you can redirect the user to the login page or perform other actions
   }
-  // Event listener for creating new notes
+
   pinIcon.addEventListener('click', async function () {
     var noteContent = noteInput.value.trim();
 
     if (noteContent !== '') {
+      if (typeof noteContent !== 'string') {
+        console.error('Note content is not a string:', noteContent);
+        return;
+      }
       try {
         //Get user ID from session
         const userId = await getUserIdFromSession();
-        // Send the new note to the server for storage
+        // Send note to  server for storage
+        console.log('Sending request to create note. Content:', noteContent);
         const response = await fetch('/createNote', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ content: noteContent, userId }),
+          body: JSON.stringify({ content: `${noteContent}`, userId }),
         });
 
         console.log(userId);
         if (response.ok) {
+          const createdNote = await response.json();
+          console.log('Created Note:', createdNote);
           // Create a new note card for the new note
-          createNoteCard(noteContent);
+          createNoteCard(createdNote);
 
           // Clear the input after creating the note card
           noteInput.value = '';
