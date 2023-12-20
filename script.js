@@ -5,11 +5,9 @@ document.addEventListener('DOMContentLoaded', async function () {
   var pinIcon = document.querySelector('.pin-icon');
   var noteContainer = document.querySelector('.note-container');
 
-  // Check if the page was redirected due to forced login
   const forcedLogin = window.location.search.includes('forcedLogin=true');
 
   if (forcedLogin) {
-    // Display a message to the user
     alert('You have been redirected to the login page. Please log in to continue.');
   }
   window.addEventListener('error', function (event) {
@@ -19,24 +17,20 @@ document.addEventListener('DOMContentLoaded', async function () {
   var logoutLink = document.getElementById('logout');
   if (logoutLink) {
     logoutLink.addEventListener('click', async function (event) {
-      // Prevent the default link behavior
       event.preventDefault();
 
       try {
-        // Perform logout actions, clear session, token, etc.
         const response = await fetch('/logout', {
           method: 'GET',
           credentials: 'include',
         });
 
-        // Check if the logout was successful
         if (response.ok) {
-          console.log('okay!');
-          // Clear user information from sessionStorage
-          sessionStorage.removeItem('user');
-          // Redirect to the login page
+          document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+          console.log('cookie cleared');
+          debugger;
           window.location.replace('/login.html');
-          console.log('session cleared');
         } else {
           console.error('Failed to log out. Server returned:', response.status);
         }
@@ -46,14 +40,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
   }
 
-  // Function to create a note card
   function createNoteCard(note) {
     var noteCard = document.createElement('div');
     noteCard.className = 'note-card';
 
     if (note && note.content !== undefined) {
       var content = note.content || '';
-      // Calculate content length to determine dynamic width
+
       var contentLength = content.length;
 
       // Adjust min-width and max-width based on content length
@@ -97,42 +90,92 @@ document.addEventListener('DOMContentLoaded', async function () {
       console.error('Note content is undefined:', note);
     }
   }
-  async function getUserIdFromSession() {
+  const loginForm = document.getElementById('login-form');
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      let usernameInput = document.getElementById('username');
+      let passwordInput = document.getElementById('password');
+
+      if (!usernameInput || !passwordInput) {
+        console.error('Username or password input not found');
+        return;
+      }
+
+      let username = usernameInput.value;
+      let password = passwordInput.value;
+      console.log('Username input:', usernameInput.value);
+      console.log('Password input:', passwordInput.value);
+
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ usernameInput, passwordInput }),
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          // Redirect or perform other actions as needed
+          window.location.replace('/Home.html');
+          await displayExistingNotes();
+        } else {
+          const errorMessage = await response.text();
+          console.error(`Authentication failed. Server returned: ${response.status}, ${errorMessage}`);
+          // Handle failed authentication, e.g., show an error message
+        }
+      } catch (error) {
+        console.error('Error during login:', error);
+        // Handle other errors during login
+      }
+    });
+  }
+
+  async function getUserIdFromCookies() {
     return new Promise((resolve) => {
-      const user = JSON.parse(sessionStorage.getItem('user'));
-      resolve(user ? user._id : null);
+      try {
+        const cookieData = document.cookie
+          .split(';')
+          .map((cookie) => cookie.trim())
+          .find((cookie) => cookie.startsWith('user='));
+
+        if (cookieData) {
+          const userData = JSON.parse(decodeURIComponent(cookieData.substring('user='.length)));
+          const userId = userData ? userData._id : null;
+          console.log(userId);
+          resolve(userId);
+        } else {
+          resolve(null);
+        }
+      } catch (error) {
+        console.error('Error parsing user data from cookies:', error);
+        resolve(null);
+      }
     });
   }
 
   async function displayExistingNotes() {
     try {
-      const response = await fetch('/getNotes');
-      const rawData = await response.json();
-      console.log('Raw response from server:', rawData);
+      const userCookie = document.cookie.split(';').find((c) => c.trim().startsWith('user='));
+      const user = userCookie ? JSON.parse(userCookie.split('=')[1]) : null;
 
-      // parsing  response as JSON
-      let data;
-      try {
-        data = rawData;
-      } catch (parseError) {
-        console.error('Error parsing response as JSON:', parseError);
-        return;
-      }
+      if (user && user.notes) {
+        console.log('User data found:', user);
 
-      if (data && data.notes) {
-        data.notes.forEach((note) => createNoteCard(note));
+        user.notes.forEach((note) => createNoteCard(note));
       } else {
-        console.error('Unexpected response format:', data);
+        console.error('User data or notes not found:', user);
       }
     } catch (error) {
-      console.error('Error fetching notes:', error);
+      console.error('Error displaying notes for user:', error);
     }
   }
 
-  // Display existing notes on page load
-  await displayExistingNotes();
-
-  const userId = getUserIdFromSession();
+  const userId = await getUserIdFromCookies();
   if (!userId) {
     console.error('User not logged in. Unable to create note.');
   }
@@ -146,9 +189,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
       }
       try {
-        //Get user ID from session
-        const userId = await getUserIdFromSession();
-        // Send note to  server for storage
+        const userId = await getUserIdFromCookies();
+        console.log(userId);
+
         console.log('Sending request to create note. Content:', noteContent);
         const response = await fetch('/createNote', {
           method: 'POST',
@@ -156,16 +199,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ content: `${noteContent}`, userId }),
+          credentials: 'include',
         });
 
         console.log(userId);
         if (response.ok) {
           const createdNote = await response.json();
           console.log('Created Note:', createdNote);
-          // Create a new note card for the new note
+
           createNoteCard(createdNote);
 
-          // Clear the input after creating the note card
           noteInput.value = '';
         } else {
           console.error('Failed to create note. Server returned:', response.status);

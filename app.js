@@ -18,7 +18,9 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(express.json());
+// app.use(express.json());
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 app.use(cors(corsOptions));
 app.set('views', path.join(__dirname, '/'));
 app.use(express.static(path.join(__dirname, '/')));
@@ -27,12 +29,26 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Connect to MongoDB
 mongoose.connect('mongodb+srv://bloguser:bloguser@cluster0.0ioti5t.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
 
+app.use(
+  session({
+    secret: secureSecret,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: false, // Set to true in a production environment with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // Set the session timeout (in milliseconds)
+    },
+  })
+);
+
 // Define User schema
 const userSchema = new mongoose.Schema({
   username: String,
   password: String,
   role: String,
   active: Boolean,
+  notes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Note' }],
 });
 
 const User = mongoose.model('User', userSchema);
@@ -44,14 +60,6 @@ const noteSchema = new mongoose.Schema({
 });
 
 const Note = mongoose.model('Note', noteSchema);
-
-app.use(
-  session({
-    secret: secureSecret,
-    resave: false,
-    saveUninitialized: true,
-  })
-);
 
 const authenticateUser = async (req, res, next) => {
   if (req.session && req.session.user) {
@@ -118,16 +126,28 @@ app.post('/login', async (req, res) => {
 
   try {
     console.log('Attempting to find user:', username);
-    const user = await User.findOne({ username, password });
-    if (user) {
-      // Fetch notes associated with the user
-      const userNotes = await Note.find({ user: user._id });
+    console.log('Received login request. Username:', req.body.username);
 
-      // Render Home.html and pass user and notes data
-      console.log('User found. Redirecting to Home.html');
+    const user = await User.findOne({
+      username: req.body.username,
+      password: req.body.password,
+    });
+    if (user) {
+      const userWithNotes = await User.findById(user._id).populate('notes');
+
       // Store user information in session storage
-      req.session.user = { _id: user._id, username: user.username, role: user.role, active: user.active, notes: userNotes };
-      // Send response to the client
+      res.cookie('user', JSON.stringify({ _id: user._id, username: user.username, role: user.role, active: user.active }));
+
+      // Save the session explicitly
+      //   await req.session.save((err) => {
+      //     if (err) {
+      //       console.error('Error saving session after login:', err);
+      //       res.status(500).json({ error: 'Internal Server Error' });
+      //     } else {
+      //       // Redirect to Home.html or perform other actions as needed
+      //       res.redirect('/Home.html');
+      //     }
+      //   });
       res.redirect('/Home.html');
     } else {
       // Redirect to login.html with an error parameter
@@ -139,22 +159,17 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+app.get('/getUserInfo', authenticateUser, (req, res) => {
+  // Respond with user information stored in the session
+  res.json({ user: req.cookies.user });
+});
 
 app.get('/logout', (req, res) => {
-  // Check if the user is already logged out
-  if (!req.session || !req.session.user) {
-    return res.redirect('/login.html');
-  }
+  // Clear the user cookie
+  res.clearCookie('user');
 
-  // Destroy the session to log the user out
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Error destroying session:', err);
-    } else {
-      console.log('Session destroyed');
-      res.redirect('/login.html');
-    }
-  });
+  // Redirect to the login page
+  res.redirect('/login.html');
 });
 
 // Registration route
@@ -182,7 +197,7 @@ app.post('/register', async (req, res) => {
 });
 
 // Note creation route
-app.post('/createNote', authenticateUser, async (req, res) => {
+app.post('/createNote', express.json(), authenticateUser, async (req, res) => {
   const { content } = req.body;
   const userId = req.currentUser._id;
 
@@ -212,18 +227,22 @@ app.post('/createNote', authenticateUser, async (req, res) => {
 
 // Retrieve notes route
 app.get('/getNotes', authenticateUser, (req, res) => {
-  const userId = req.session.user._id;
+  const userId = req.cookies.user ? req.cookies.user._id : null;
+
+  console.log('Session during /getNotes:', req.cookies);
 
   try {
     // Find notes associated with the user
     Note.find({ user: userId })
       .sort({ createdAt: -1 })
       .exec((err, userNotes) => {
+        console.log(userNotes);
         if (err) {
           console.error('Error fetching notes:', err); // Log the error
           res.status(500).json({ error: 'Internal Server Error' });
         } else {
           console.log('Notes sent to client:', userNotes); // Log the notes
+          res.setHeader('Content-Type', 'application/json');
           res.json({ notes: userNotes });
         }
       });

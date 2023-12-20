@@ -167,3 +167,53 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
   });
 });
+
+// login logic front-end
+
+const loginForm = document.getElementById('login-form');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault(); // Prevent the default form submission
+
+    // Get the username and password from the form
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    if (usernameInput && passwordInput) {
+      const username = usernameInput.value;
+      const password = passwordInput.value;
+
+      try {
+        // Perform the login request
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+          credentials: 'include', // Include this line to send cookies
+        });
+
+        if (response.ok) {
+          // Login successful, handle the response as needed
+          const userData = await response.json();
+          console.log('User data received:', userData);
+
+          // Save user information in sessionStorage
+          sessionStorage.setItem('user', JSON.stringify(userData.user));
+
+          // Redirect or perform other actions as needed
+          window.location.replace('/Home.html');
+        } else {
+          console.error('Authentication failed. Server returned:', response.status);
+          // Handle failed authentication, e.g., show an error message
+        }
+      } catch (error) {
+        console.error('Error during login:', error);
+        // Handle other errors during login
+      }
+    } else {
+      console.error('Username or password input not found');
+    }
+  });
+}
